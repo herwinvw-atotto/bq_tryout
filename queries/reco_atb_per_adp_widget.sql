@@ -1,6 +1,7 @@
 -- Add-to-basket rate per reco widget on the ADP (Artikeldetailseite)
 -- Denominator: page impressions only (action IS NULL) per widget, deduplicated on dl_brain_message_hash
 -- Numerator:   AddToBasket events attributed to each widget via promo_AttributionFeature, deduplicated on dl_brain_message_hash
+-- Filters:     excludes internal (campus) traffic, bot-flagged sessions, and good-bots
 -- Date range:  yesterday (UTC)
 
 WITH reco_views AS (
@@ -16,6 +17,9 @@ WITH reco_views AS (
     AND f.dl_feature_name IN ('RecoAlternative', 'RecoComplementary', 'RecoSeries', 'Spx-Cinema')
     AND b.ot_PageCluster = 'Artikeldetailseite'
     AND b.action IS NULL
+    AND b.ot_InternalTraffic IS NULL
+    AND b.ot_Bot IS NULL
+    AND (b.bot_Classification IS NULL OR b.bot_Classification NOT IN ('BAD-BOT', 'GOOD-BOT'))
   GROUP BY 1
 ),
 reco_atbs AS (
@@ -33,6 +37,9 @@ reco_atbs AS (
     AND b.partition_day_utc <  TIMESTAMP(CURRENT_DATE())
     AND f.dl_feature_name = 'AddToBasket'
     AND b.ot_PageCluster = 'Artikeldetailseite'
+    AND b.ot_InternalTraffic IS NULL
+    AND b.ot_Bot IS NULL
+    AND (b.bot_Classification IS NULL OR b.bot_Classification NOT IN ('BAD-BOT', 'GOOD-BOT'))
     AND REGEXP_EXTRACT(b.promo_AttributionFeature, r'^(.+)_DetailView$')
           IN ('RecoAlternative', 'RecoComplementary', 'RecoSeries', 'SpaCinema')
   GROUP BY 1
